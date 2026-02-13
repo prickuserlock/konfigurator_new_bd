@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Редактировать товар • BonusDostavkaBot</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png">
+  <script src="/static/theme.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
+<script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a class="brand" href="/">
+        <span class="brand-badge" aria-hidden="true"></span>
+        <span>BonusDostavkaBot</span>
+      </a>
+      <nav class="nav">
+        <button
+          type="button"
+          class="theme-toggle"
+          id="themeToggle"
+          aria-label="Переключить тему"
+          aria-pressed="false"
+        >
+          <span class="theme-ico" aria-hidden="true">☀️</span>
+          <span class="theme-txt">Светлая</span>
+        </button>
+        <a href="/dashboard">Кабинет</a>
+        <a href="/logout">Выйти</a>
+      </nav>
+    </div>
+
+    <div class="card padded" style="max-width:980px; margin:0 auto;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <div>
+          <h1 style="font-size:28px; margin-bottom:6px;">Редактировать товар</h1>
+          <div class="small">ID: <span class="kbd">{{ prod[0] }}</span></div>
+        </div>
+        <a class="btn btn-ghost" href="{{ return_to or '/dashboard' }}">← Назад</a>
+      </div>
+
+      <hr>
+
+      <div class="grid" style="grid-template-columns: 0.9fr 1.1fr;">
+        <div>
+          <h3>Фото товара</h3>
+
+          {% if prod[4] %}
+            <div class="card padded" style="box-shadow:none;">
+              <img src="/{{ prod[4] }}" style="width:100%; max-width:360px; border-radius:16px; display:block;">
+              <p class="small" style="margin-top:10px;">Если хотите заменить фото — выберите новый файл справа.</p>
+            </div>
+          {% else %}
+            <div class="notice warn">Фото отсутствует</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <h3>Параметры</h3>
+
+          <form class="form" action="/update_product" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="prod_id" value="{{ prod[0] }}">
+            <input type="hidden" name="return_to" value="{{ return_to or ('/dashboard#prod-' ~ prod[0]) }}">
+
+            <div class="form-row">
+              <div class="label">Название</div>
+              <input type="text" name="name" value="{{ prod[1] }}" required>
+            </div>
+
+            <div class="form-row">
+              <div class="label">Цена (₽)</div>
+              <input type="number" name="price" value="{{ prod[2] }}" required>
+            </div>
+
+            <div class="form-row">
+  <div class="label">Раздел (лист)</div>
+  <select name="subcat_id" required>
+    {% for s in sections %}
+      <option value="{{ s[0] }}" {% if s[0] == prod[6] %}selected{% endif %}>{{ s[1] }}</option>
+    {% endfor %}
+  </select>
+  <div class="small" style="opacity:.8; margin-top:6px;">
+    Товары добавляются только в <b>лист</b> (подподкатегорию или подкатегорию без вложенных).
+  </div>
+</div>
+
+            <div class="form-row">
+              <div class="label">Описание</div>
+              <textarea name="description">{{ prod[3] or "" }}</textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="label">Новое фото (если нужно заменить)</div>
+              <input type="file" name="photo" accept="image/*">
+              <div class="small">
+                <label style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+                  <input type="checkbox" name="delete_photo">
+                  Удалить текущее фото
+                </label>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-success" type="submit">Сохранить</button>
+              <a class="btn btn-gray" href="{{ return_to or '/dashboard' }}">Отмена</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="small">© BonusDostavkaBot</div>
+      <div class="small"><a href="/">На главную</a></div>
+    </div>
+  </div>
+  <script src="/static/scroll_restore.js" defer></script>
+
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="/static/toast.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BonusDostavkaBot</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png">
+  <script src="/static/theme.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
+<script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a class="brand" href="/">
+        <span class="brand-badge" aria-hidden="true"></span>
+        <span>BonusDostavkaBot</span>
+      </a>
+      <nav class="nav">
+        <button
+          type="button"
+          class="theme-toggle"
+          id="themeToggle"
+          aria-label="Переключить тему"
+          aria-pressed="false"
+        >
+          <span class="theme-ico" aria-hidden="true">☀️</span>
+          <span class="theme-txt">Светлая</span>
+        </button>
+        {% if is_logged_in %}
+          <a href="/dashboard">Кабинет</a>
+          <a href="/logout">Выход</a>
+        {% else %}
+          <a href="/register">Регистрация</a>
+          <a href="/login">Вход</a>
+        {% endif %}
+      </nav>
+    </div>
+
+    <div class="grid">
+      <section class="card padded">
+        <h1>Программа лояльности и заказы в Telegram</h1>
+        <p>Создайте бота для кафе/магазина: меню, корзина, заказы, бонусы и QR-карта клиента — всё из админки.</p>
+
+        <div class="actions">
+          <a class="btn btn-primary" href="/register">Регистрация</a>
+          <a class="btn btn-ghost" href="/login">Войти</a>
+        </div>
+
+        <hr>
+
+        <h3>Что уже есть</h3>
+        <ul>
+          <li>Категории, товары, фото</li>
+          <li>Корзина и оформление заказа в Telegram</li>
+          <li>Уведомления о заказах в чат сотрудников</li>
+          <li>Бонусная система (начисления/списание/приветственные)</li>
+        </ul>
+
+        <p class="small" style="margin-top:12px;">
+          Токен берётся в <span class="kbd">@BotFather</span>. Ссылка <span class="kbd">/create</span> попросит логин, если вы не вошли.
+        </p>
+      </section>
+
+      <aside class="card padded">
+        <h2>Быстрый старт</h2>
+        <ol>
+          <li>Зарегистрируйтесь</li>
+          <li>Войдите</li>
+          <li>Создайте бота и вставьте токен</li>
+          <li>Добавьте категории и товары</li>
+        </ol>
+
+        <hr>
+
+      </aside>
+    </div>
+
+    <div class="footer">
+      <div class="small">FastAPI • aiogram • SQLite</div>
+      <div class="small"><a href="/">На главную</a></div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="/static/toast.js" defer></script>
+</body>
+</html>
