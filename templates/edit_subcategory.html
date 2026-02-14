@@ -17,7 +17,13 @@
         <span>BonusDostavkaBot</span>
       </a>
       <nav class="nav">
-        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Переключить тему" aria-pressed="false">
+        <button
+          type="button"
+          class="theme-toggle"
+          id="themeToggle"
+          aria-label="Переключить тему"
+          aria-pressed="false"
+        >
           <span class="theme-ico" aria-hidden="true">☀️</span>
           <span class="theme-txt">Светлая</span>
         </button>
@@ -33,9 +39,8 @@
           <div class="small">
             ID: <span class="kbd">{{ sub[0] }}</span>
             <span style="margin:0 8px; opacity:.5;">•</span>
-            Бот ID: <span class="kbd">{{ bot_id }}</span>
+            {{ crumbs }}
           </div>
-          <div class="small" style="margin-top:6px; opacity:.8;">{{ crumbs }}</div>
         </div>
         <a class="btn btn-ghost" href="{{ return_to or '/dashboard' }}">← Назад</a>
       </div>
@@ -45,7 +50,8 @@
       <div class="grid" style="grid-template-columns: 0.9fr 1.1fr;">
         <div>
           <h3>Фото подкатегории</h3>
-          {% if sub|length > 6 and sub[6] %}
+
+          {% if sub[6] %}
             <div class="card padded" style="box-shadow:none;">
               <img src="/{{ sub[6] }}" style="width:100%; max-width:360px; border-radius:16px; display:block;">
               <p class="small" style="margin-top:10px;">Если хотите заменить фото — выберите новый файл справа.</p>
@@ -61,30 +67,7 @@
           <form class="form" action="/update_subcategory" method="post" enctype="multipart/form-data">
             <input type="hidden" name="bot_id" value="{{ bot_id }}">
             <input type="hidden" name="subcat_id" value="{{ sub[0] }}">
-            <input type="hidden" name="return_to" value="{{ return_to or ('/dashboard#cat-' ~ sub[2]) }}">
-
-            <div class="form-row">
-              <div class="label">Категория</div>
-              <select name="cat_id" required>
-                {% for c in cats %}
-                  <option value="{{ c[0] }}" {% if c[0] == sub[2] %}selected{% endif %}>{{ c[2] }}</option>
-                {% endfor %}
-              </select>
-            </div>
-
-
-<div class="form-row">
-  <div class="label">Родитель (для подподкатегории)</div>
-  <select name="parent_subcat_id">
-    <option value="" {% if sub[7] is none %}selected{% endif %}>— Нет (1-й уровень) —</option>
-    {% for p in parent_options %}
-      <option value="{{ p[0] }}" {% if sub[7] == p[0] %}selected{% endif %}>{{ p[1] }}</option>
-    {% endfor %}
-  </select>
-  <div class="small" style="opacity:.75; margin-top:6px;">
-    Товары добавляются только в <b>подподкатегории</b> (2-й уровень внутри категории).
-  </div>
-</div>
+            <input type="hidden" name="return_to" value="{{ return_to or ('/dashboard#subcat-' ~ sub[0]) }}">
 
             <div class="form-row">
               <div class="label">Название</div>
@@ -92,26 +75,34 @@
             </div>
 
             <div class="form-row">
-              <label class="label" style="display:flex; align-items:center; gap:10px;">
+              <div class="label">Статус</div>
+              <label style="display:flex; gap:10px; align-items:center;">
                 <input type="checkbox" name="enabled" value="1" {% if sub[4] == 1 %}checked{% endif %}>
-                <span>Активна (видна клиентам)</span>
+                Активна (показывать в меню)
               </label>
             </div>
 
             <div class="form-row">
               <div class="label">Новое фото (если нужно заменить)</div>
               <input type="file" name="photo" accept="image/*">
-              {% if sub|length > 6 and sub[6] %}
-                <label class="small" style="display:flex; align-items:center; gap:10px; margin-top:8px;">
-                  <input type="checkbox" name="delete_photo" value="on">
-                  <span>Удалить текущее фото</span>
+              {% if sub[6] %}
+              <div class="small">
+                <label style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+                  <input type="checkbox" name="delete_photo">
+                  Удалить текущее фото
                 </label>
+              </div>
               {% endif %}
             </div>
 
             <div class="actions">
               <button class="btn btn-success" type="submit">Сохранить</button>
               <a class="btn btn-gray" href="{{ return_to or '/dashboard' }}">Отмена</a>
+            </div>
+
+            <div class="notice" style="margin-top:14px;">
+              <b>Важно:</b> здесь редактируются только название/статус/фото.
+              Перенос между разделами и выбор «родителя» убраны.
             </div>
           </form>
         </div>
@@ -129,3 +120,4 @@
   <script src="/static/toast.js" defer></script>
 </body>
 </html>
+
