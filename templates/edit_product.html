@@ -75,18 +75,6 @@
             </div>
 
             <div class="form-row">
-  <div class="label">Раздел (лист)</div>
-  <select name="subcat_id" required>
-    {% for s in sections %}
-      <option value="{{ s[0] }}" {% if s[0] == prod[6] %}selected{% endif %}>{{ s[1] }}</option>
-    {% endfor %}
-  </select>
-  <div class="small" style="opacity:.8; margin-top:6px;">
-    Товары добавляются только в <b>лист</b> (подподкатегорию или подкатегорию без вложенных).
-  </div>
-</div>
-
-            <div class="form-row">
               <div class="label">Описание</div>
               <textarea name="description">{{ prod[3] or "" }}</textarea>
             </div>
