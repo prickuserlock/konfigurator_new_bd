@@ -76,6 +76,14 @@
             <div class="form-row">
               <div class="label">Новое фото (если нужно заменить)</div>
               <input type="file" name="photo" accept="image/*">
+              {% if cat[3] %}
+              <div class="small">
+                <label style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+                  <input type="checkbox" name="delete_photo">
+                  Удалить текущее фото
+                </label>
+              </div>
+              {% endif %}
 </div>
 
             <div class="actions">
