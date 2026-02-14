@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-aiogram==3.*
-jinja2
-python-multipart
-qrcode[pil]
-pillow
-psycopg[binary]
