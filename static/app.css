@@ -513,6 +513,30 @@ html[data-theme="dark"] .tg-open-btn:hover{
   border-color: rgba(147,197,253,.55);
 }
 
+/* Миниатюры для категорий/подкатегорий в строке меню (dashboard) */
+.page-dashboard .thumb{
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card2);
+  flex: 0 0 auto;
+  display: block;
+}
+
+.page-dashboard .thumb--cat{
+  width: 120px;
+  height: 120px;
+}
+
+.page-dashboard .thumb--subcat{
+  width: 120px;
+  height: 120px;
+  border-radius: 9px;
+}
+
+
 /* =========================================================
    Dashboard: Menu Tree (accordion like screenshot)
    ========================================================= */
