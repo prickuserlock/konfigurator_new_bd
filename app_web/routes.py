@@ -437,30 +437,7 @@ def register_routes(app):
         if not sub:
             return RedirectResponse("/dashboard?err=Подкатегория не найдена", status_code=303)
 
-        cur.execute(
-            """
-            SELECT id, bot_id, name, enabled, sort_order
-            FROM categories
-            WHERE bot_id=?
-            ORDER BY sort_order ASC, id ASC
-            """,
-            (bot_id,),
-        )
-        cats = cur.fetchall()
-
-        # варианты "родителя" — только root-подкатегории в текущей категории
-        cur.execute(
-            """
-            SELECT id, name
-            FROM subcategories
-            WHERE bot_id=? AND cat_id=? AND parent_subcat_id IS NULL AND id<>?
-            ORDER BY sort_order ASC, id ASC
-            """,
-            (bot_id, int(sub[2]), subcat_id),
-        )
-        parent_options = cur.fetchall()
-
-        # хлебные крошки
+        # хлебные крошки (показываем где находится, но редактировать "родителя" больше не даём)
         cur.execute("SELECT name FROM categories WHERE id=? AND bot_id=?", (int(sub[2]), bot_id))
         cat_name = (cur.fetchone() or ["Категория"])[0]
         crumbs = f"{cat_name} → {sub[3]}"
@@ -475,13 +452,10 @@ def register_routes(app):
             "edit_subcategory.html",
             {
                 "request": request,
-                "user": user,
-                "bot_id": bot_id,
                 "sub": sub,
-                "cats": cats,
-                "parent_options": parent_options,
                 "crumbs": crumbs,
                 "return_to": return_to,
+                "bot_id": bot_id,
             },
         )
 
@@ -489,10 +463,8 @@ def register_routes(app):
     async def update_subcategory(
         bot_id: int = Form(...),
         subcat_id: int = Form(...),
-        cat_id: int = Form(...),
         name: str = Form(...),
         enabled: int = Form(0),
-        parent_subcat_id: str | None = Form(None),
         photo: UploadFile = File(None),
         delete_photo: str = Form(None),
         return_to: str = Form("/dashboard"),
@@ -502,73 +474,25 @@ def register_routes(app):
             return RedirectResponse(set_qp(safe_return_to(return_to, "/dashboard"), "err", "Нет доступа"), status_code=303)
 
         cur.execute(
-            "SELECT cat_id, parent_subcat_id, photo_path FROM subcategories WHERE id=? AND bot_id=?",
+            "SELECT cat_id, photo_path FROM subcategories WHERE id=? AND bot_id=?",
             (subcat_id, bot_id),
         )
         row = cur.fetchone()
         if not row:
             return RedirectResponse(set_qp(safe_return_to(return_to, "/dashboard"), "err", "Подкатегория не найдена"), status_code=303)
 
-        old_cat_id = int(row[0])
-        old_parent_id = row[1]  # may be None
-        old_photo = row[2]
+        real_cat_id = int(row[0])
+        old_photo = row[1]
 
         nm = (name or "").strip()
         if not nm:
-            return RedirectResponse(set_qp(safe_return_to(return_to, f"/dashboard#cat-{old_cat_id}"), "err", "Введите название"), status_code=303)
-
-        # parse parent_subcat_id
-        new_parent_id: int | None = None
-        if parent_subcat_id not in (None, "", "0"):
-            try:
-                new_parent_id = int(parent_subcat_id)
-            except Exception:
-                new_parent_id = None
-
-        # если у этой подкатегории есть дети — её нельзя делать подподкатегорией и нельзя переносить в другую категорию
-        if _subcat_has_children(bot_id, subcat_id):
-            if new_parent_id is not None:
-                return RedirectResponse(set_qp(safe_return_to(return_to, f"/dashboard#subcat-{subcat_id}"), "err", "Нельзя изменить уровень: у подкатегории есть вложенные подкатегории"), status_code=303)
-            if int(cat_id) != old_cat_id:
-                return RedirectResponse(set_qp(safe_return_to(return_to, f"/dashboard#subcat-{subcat_id}"), "err", "Нельзя переносить подкатегорию с вложенными подкатегориями в другую категорию"), status_code=303)
-
-        # validate new category exists
-        cur.execute("SELECT 1 FROM categories WHERE bot_id=? AND id=?", (bot_id, int(cat_id)))
-        if not cur.fetchone():
-            return RedirectResponse(set_qp(safe_return_to(return_to, "/dashboard"), "err", "Категория не найдена"), status_code=303)
-
-        # validate parent rules
-        if new_parent_id is not None:
-            if new_parent_id == subcat_id:
-                return RedirectResponse(set_qp(safe_return_to(return_to, f"/dashboard#subcat-{subcat_id}"), "err", "Подкатегория не может быть родителем самой себя"), status_code=303)
-
-            cur.execute(
-                "SELECT cat_id, parent_subcat_id FROM subcategories WHERE id=? AND bot_id=?",
-                (new_parent_id, bot_id),
-            )
-            pr = cur.fetchone()
-            if not pr:
-                return RedirectResponse(set_qp(safe_return_to(return_to, f"/dashboard#cat-{cat_id}"), "err", "Родительская подкатегория не найдена"), status_code=303)
-
-            if int(pr[0]) != int(cat_id):
-                return RedirectResponse(set_qp(safe_return_to(return_to, f"/dashboard#cat-{cat_id}"), "err", "Родитель должен быть из этой же категории"), status_code=303)
-
-            if pr[1] is not None:
-                return RedirectResponse(set_qp(safe_return_to(return_to, f"/dashboard#cat-{cat_id}"), "err", "Нельзя создавать 4-й уровень вложенности"), status_code=303)
-
-            if _subcat_has_products(bot_id, new_parent_id):
-                return RedirectResponse(set_qp(safe_return_to(return_to, f"/dashboard#subcat-{new_parent_id}"), "err", "Нельзя сделать подкатегорию родителем: в ней уже есть товары"), status_code=303)
-
-        # Нельзя делать подкатегорию root-уровня, если в ней есть товары (товары должны быть в подподкатегории)
-        if new_parent_id is None:
-            if _subcat_has_products(bot_id, subcat_id):
-                return RedirectResponse(set_qp(safe_return_to(return_to, f"/dashboard#subcat-{subcat_id}"), "err", "Нельзя сделать подкатегорию 1-го уровня: перенесите товары в подподкатегорию"), status_code=303)
+            return RedirectResponse(set_qp(safe_return_to(return_to, f"/dashboard#cat-{real_cat_id}"), "err", "Введите название"), status_code=303)
 
         # photo handling
         photo_path = old_photo
-        if photo and getattr(photo, "filename", None):
-            if photo.filename:
-                photo_bytes = await photo.read()
+        if photo and getattr(photo, "filename", None) and photo.filename:
+            photo_bytes = await photo.read()
+            if photo_bytes:
                 os.makedirs("static/subcategories", exist_ok=True)
 
                 safe_name = safe_filename(photo.filename, default="subcat.jpg")
@@ -577,71 +501,31 @@ def register_routes(app):
                 if ext not in (".jpg", ".jpeg", ".png", ".webp"):
                     ext = ".jpg"
 
-                photo_path = f"static/subcategories/{bot_id}_{int(cat_id)}_{int(time.time())}_{uuid.uuid4().hex}{ext}"
+                photo_path = f"static/subcategories/{bot_id}_{real_cat_id}_{int(time.time())}_{uuid.uuid4().hex}{ext}"
                 with open(photo_path, "wb") as f:
                     f.write(photo_bytes)
 
                 if old_photo and os.path.exists(old_photo):
                     try:
                         os.remove(old_photo)
-                    except:
+                    except Exception:
                         pass
-        elif delete_photo == "on" and photo_path:
+        elif delete_photo == "on" and old_photo:
             try:
-                os.remove(photo_path)
-            except:
+                if os.path.exists(old_photo):
+                    os.remove(old_photo)
+            except Exception:
                 pass
             photo_path = None
 
-        new_cat_id = int(cat_id)
         en = 1 if int(enabled) == 1 else 0
-        group_changed = (new_cat_id != old_cat_id) or (new_parent_id != old_parent_id)
-
-        if group_changed:
-            # place at end of new group
-            if new_parent_id is None:
-                cur.execute(
-                    "SELECT COALESCE(MAX(sort_order), 0) FROM subcategories WHERE bot_id=? AND cat_id=? AND parent_subcat_id IS NULL",
-                    (bot_id, new_cat_id),
-                )
-            else:
-                cur.execute(
-                    "SELECT COALESCE(MAX(sort_order), 0) FROM subcategories WHERE bot_id=? AND cat_id=? AND parent_subcat_id=?",
-                    (bot_id, new_cat_id, new_parent_id),
-                )
-            new_sort = int(cur.fetchone()[0] or 0) + 1
-
-            cur.execute(
-                """
-                UPDATE subcategories
-                SET cat_id=?, name=?, enabled=?, photo_path=?, parent_subcat_id=?, sort_order=?
-                WHERE id=? AND bot_id=?
-                """,
-                (new_cat_id, nm, en, photo_path, new_parent_id, new_sort, subcat_id, bot_id),
-            )
-
-            # если поменяли категорию — синхронизируем cat_id у товаров этой подкатегории
-            if new_cat_id != old_cat_id:
-                cur.execute(
-                    "UPDATE products SET cat_id=? WHERE bot_id=? AND subcat_id=?",
-                    (new_cat_id, bot_id, subcat_id),
-                )
-
-            # renumber both groups
-            _subcat_renumber(bot_id, old_cat_id, old_parent_id)
-            _subcat_renumber(bot_id, new_cat_id, new_parent_id)
-        else:
-            cur.execute(
-                """
-                UPDATE subcategories
-                SET name=?, enabled=?, photo_path=?
-                WHERE id=? AND bot_id=?
-                """,
-                (nm, en, photo_path, subcat_id, bot_id),
-            )
-
+        cur.execute(
+            "UPDATE subcategories SET name=?, enabled=?, photo_path=? WHERE id=? AND bot_id=?",
+            (nm, en, photo_path, subcat_id, bot_id),
+        )
         conn.commit()
-        target = set_qp(safe_return_to(return_to, f"/dashboard#cat-{new_cat_id}"), "msg", "Подкатегория обновлена")
+
+        target = set_qp(safe_return_to(return_to, f"/dashboard#cat-{real_cat_id}"), "msg", "Подкатегория обновлена")
         return RedirectResponse(target, status_code=303)
 
     @app.post("/delete_subcategory")
@@ -1068,6 +952,7 @@ def register_routes(app):
         cat_id: int = Form(...),
         name: str = Form(...),
         photo: UploadFile = File(None),
+        delete_photo: str | None = Form(None),
         return_to: str | None = Form(None),
         user: str = Depends(get_current_user),
     ):
@@ -1077,12 +962,12 @@ def register_routes(app):
 
         # Достаём bot_id и старое фото + проверяем владельца
         cur.execute(
-            '''
+            """
             SELECT c.bot_id, c.photo_path
             FROM categories c
             JOIN bots b ON b.bot_id = c.bot_id
             WHERE c.id=? AND b.owner=?
-            ''',
+            """,
             (cat_id, user),
         )
         row = cur.fetchone()
@@ -1091,33 +976,45 @@ def register_routes(app):
 
         bot_id, old_photo = int(row[0]), row[1]
 
-        photo_path = None
+        photo_path = old_photo
+
+        # Новое фото
         if photo and getattr(photo, "filename", None):
             photo_bytes = await photo.read()
-            os.makedirs("static/categories", exist_ok=True)
+            if photo_bytes:
+                os.makedirs("static/categories", exist_ok=True)
 
-            safe_name = safe_filename(photo.filename, default="category.jpg")
-            _, ext = os.path.splitext(safe_name)
-            ext = (ext or ".jpg").lower()
-            if ext not in (".jpg", ".jpeg", ".png", ".webp"):
-                ext = ".jpg"
+                safe_name = safe_filename(photo.filename, default="category.jpg")
+                _, ext = os.path.splitext(safe_name)
+                ext = (ext or ".jpg").lower()
+                if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+                    ext = ".jpg"
 
-            photo_path = f"static/categories/cat_{bot_id}_{cat_id}_{int(time.time())}_{uuid.uuid4().hex}{ext}"
-            with open(photo_path, "wb") as f:
-                f.write(photo_bytes)
+                photo_path = f"static/categories/cat_{bot_id}_{cat_id}_{int(time.time())}_{uuid.uuid4().hex}{ext}"
+                with open(photo_path, "wb") as f:
+                    f.write(photo_bytes)
 
-            # удаляем старое фото (если было)
-            if old_photo:
-                try:
-                    if os.path.exists(old_photo):
-                        os.remove(old_photo)
-                except Exception:
-                    pass
+                # удаляем старое фото (если было)
+                if old_photo:
+                    try:
+                        if os.path.exists(old_photo):
+                            os.remove(old_photo)
+                    except Exception:
+                        pass
 
-        if photo_path:
-            cur.execute("UPDATE categories SET name=?, photo_path=? WHERE id=? AND bot_id=?", (nm, photo_path, cat_id, bot_id))
-        else:
-            cur.execute("UPDATE categories SET name=? WHERE id=? AND bot_id=?", (nm, cat_id, bot_id))
+        # Удалить текущее фото
+        elif delete_photo == "on" and old_photo:
+            try:
+                if os.path.exists(old_photo):
+                    os.remove(old_photo)
+            except Exception:
+                pass
+            photo_path = None
+
+        cur.execute(
+            "UPDATE categories SET name=?, photo_path=? WHERE id=? AND bot_id=?",
+            (nm, photo_path, cat_id, bot_id),
+        )
 
         conn.commit()
         return RedirectResponse(safe_return_to(return_to, f"/dashboard#cat-{cat_id}"), status_code=303)
@@ -1935,50 +1832,11 @@ def register_routes(app):
         if not prod:
             return RedirectResponse("/dashboard", status_code=303)
 
-        bot_id = int(prod[7])
-
-        # Список "листовых" подподкатегорий (только 2-й уровень: parent_subcat_id IS NOT NULL и без детей)
-        cur.execute("SELECT id, name FROM categories WHERE bot_id=? ORDER BY sort_order, id", (bot_id,))
-        cats = {int(r[0]): r[1] for r in cur.fetchall()}
-
-        cur.execute(
-            """
-            SELECT s.id, s.cat_id, s.name, s.parent_subcat_id
-            FROM subcategories s
-            WHERE s.bot_id=?
-              AND s.parent_subcat_id IS NOT NULL
-              AND NOT EXISTS (
-                SELECT 1 FROM subcategories c
-                WHERE c.bot_id=s.bot_id AND c.parent_subcat_id=s.id
-              )
-            ORDER BY s.cat_id, s.parent_subcat_id, s.sort_order, s.id
-            """,
-            (bot_id,),
-        )
-        leaf_rows = cur.fetchall()
-
-        parent_ids = [int(r[3]) for r in leaf_rows if r[3] is not None]
-        parent_names = {}
-        if parent_ids:
-            ph = ",".join(["?"] * len(parent_ids))
-            cur.execute(
-                f"SELECT id, name FROM subcategories WHERE bot_id=? AND id IN ({ph})",
-                (bot_id, *parent_ids),
-            )
-            parent_names = {int(r[0]): r[1] for r in cur.fetchall()}
-
-        sections = []
-        for sid, cid, nm, pid in leaf_rows:
-            cat_name = cats.get(int(cid), "Категория")
-            label = f"{cat_name} → {parent_names.get(int(pid), 'Подкатегория')} → {nm}"
-            sections.append((int(sid), label))
-
         return templates.TemplateResponse(
             "edit_product.html",
             {
                 "request": request,
-                "prod": prod,  # (id, name, price, desc, photo_path, cat_id, subcat_id, bot_id)
-                "sections": sections,
+                "prod": prod,
                 "return_to": safe_return_to(request.query_params.get("return_to"), "/dashboard"),
             },
         )
@@ -1989,7 +1847,6 @@ def register_routes(app):
         name: str = Form(...),
         price: int = Form(...),
         description: str = Form(None),
-        subcat_id: int = Form(...),
         photo: UploadFile = File(None),
         delete_photo: str = Form(None),
         return_to: str | None = Form(None),
@@ -2008,25 +1865,17 @@ def register_routes(app):
         if not row or row[4] != user:
             return RedirectResponse("/dashboard", status_code=303)
 
-        old_photo_path, bot_id, old_cat_id, old_subcat_id = row[0], int(row[1]), int(row[2]), row[3]
+        old_photo_path, bot_id, cat_id = row[0], int(row[1]), int(row[2])
 
-        cur.execute("SELECT cat_id, parent_subcat_id FROM subcategories WHERE id=? AND bot_id=?", (subcat_id, bot_id))
-        sr = cur.fetchone()
-        if not sr:
-            return RedirectResponse(set_qp(safe_return_to(return_to, "/dashboard"), "err", "Подподкатегория не найдена"), status_code=303)
+        clean_name = (name or "").strip()
+        if not clean_name:
+            return RedirectResponse(set_qp(safe_return_to(return_to, "/dashboard"), "err", "Введите название"), status_code=303)
 
-        if sr[1] is None:
-            return RedirectResponse(set_qp(safe_return_to(return_to, "/dashboard"), "err", "Товар можно привязывать только к подподкатегории (2-й уровень меню)"), status_code=303)
-
-        if not _subcat_is_leaf(bot_id, int(subcat_id)):
-            return RedirectResponse(set_qp(safe_return_to(return_to, "/dashboard"), "err", "Выберите подподкатегорию (лист), в которую добавляются товары"), status_code=303)
-
-        new_cat_id = int(sr[0])
-
+        # фото
         photo_path = old_photo_path
-        if photo and getattr(photo, "filename", None):
-            if photo.filename:
-                photo_bytes = await photo.read()
+        if photo and getattr(photo, "filename", None) and photo.filename:
+            photo_bytes = await photo.read()
+            if photo_bytes:
                 os.makedirs("static/products", exist_ok=True)
 
                 safe_name = safe_filename(photo.filename, default="product.jpg")
@@ -2035,135 +1884,33 @@ def register_routes(app):
                 if ext not in (".jpg", ".jpeg", ".png", ".webp"):
                     ext = ".jpg"
 
-                photo_path = f"static/products/{bot_id}_{new_cat_id}_{int(time.time())}_{uuid.uuid4().hex}{ext}"
+                photo_path = f"static/products/{bot_id}_{cat_id}_{int(time.time())}_{uuid.uuid4().hex}{ext}"
                 with open(photo_path, "wb") as f:
                     f.write(photo_bytes)
 
                 if old_photo_path and os.path.exists(old_photo_path):
                     try:
                         os.remove(old_photo_path)
-                    except:
+                    except Exception:
                         pass
-        elif delete_photo == "on" and photo_path:
+        elif delete_photo == "on" and old_photo_path:
             try:
-                os.remove(photo_path)
-            except:
+                if os.path.exists(old_photo_path):
+                    os.remove(old_photo_path)
+            except Exception:
                 pass
             photo_path = None
 
-        if int(subcat_id) != int(old_subcat_id or 0) or new_cat_id != old_cat_id:
-            cur.execute(
-                "SELECT COALESCE(MAX(sort_order), 0) FROM products WHERE bot_id=? AND cat_id=? AND subcat_id=?",
-                (bot_id, new_cat_id, subcat_id),
-            )
-            new_sort = int(cur.fetchone()[0] or 0) + 1
-
-            cur.execute(
-                """
-                UPDATE products
-                SET name=?, price=?, description=?, photo_path=?, cat_id=?, subcat_id=?, sort_order=?
-                WHERE id=? AND bot_id=?
-                """,
-                (name.strip(), int(price), (description or "").strip(), photo_path, new_cat_id, subcat_id, new_sort, prod_id, bot_id),
-            )
-        else:
-            cur.execute(
-                """
-                UPDATE products
-                SET name=?, price=?, description=?, photo_path=?
-                WHERE id=? AND bot_id=?
-                """,
-                (name.strip(), int(price), (description or "").strip(), photo_path, prod_id, bot_id),
-            )
-
+        cur.execute(
+            "UPDATE products SET name=?, price=?, description=?, photo_path=? WHERE id=? AND bot_id=?",
+            (clean_name, int(price), (description or "").strip(), photo_path, prod_id, bot_id),
+        )
         conn.commit()
         target = safe_return_to(return_to, "/dashboard")
         target = set_qp(target, "msg", "Товар успешно обновлён!")
         return RedirectResponse(target, status_code=303)
 
-    # === РЕДАКТИРОВАНИЕ КАТЕГОРИИ ===
-    @app.get("/edit_category/{cat_id}")
-    async def edit_category_get(cat_id: int, request: Request, user: str = Depends(get_current_user)):
-        cur.execute("""
-            SELECT c.id, c.bot_id, c.name, c.photo_path, b.username
-            FROM categories c
-            JOIN bots b ON c.bot_id = b.bot_id
-            WHERE c.id = ? AND b.owner = ?
-        """, (cat_id, user))
-        cat = cur.fetchone()
-        if not cat:
-            return RedirectResponse("/dashboard", status_code=303)
 
-        # cat = (id, bot_id, name, photo_path, bot_username)
-        return templates.TemplateResponse("edit_category.html", {
-            "request": request,
-            "cat": cat,
-            "return_to": safe_return_to(request.query_params.get("return_to"), "/dashboard"),
-        })
-
-    @app.post("/update_category")
-    async def update_category(
-        cat_id: int = Form(),
-        name: str = Form(),
-        photo: UploadFile = File(None),
-        delete_photo: str = Form(None),
-        return_to: str | None = Form(None),
-        user: str = Depends(get_current_user)
-    ):
-        # Проверяем, что категория принадлежит пользователю
-        cur.execute("""
-            SELECT c.photo_path, c.bot_id
-            FROM categories c
-            JOIN bots b ON c.bot_id = b.bot_id
-            WHERE c.id = ? AND b.owner = ?
-        """, (cat_id, user))
-        row = cur.fetchone()
-        if not row:
-            return RedirectResponse("/dashboard", status_code=303)
-
-        old_photo_path, bot_id = row
-        photo_path = old_photo_path
-
-        clean_name = (name or "").strip()
-        if not clean_name:
-            return RedirectResponse("/dashboard?msg=Название категории не может быть пустым", status_code=303)
-
-        # Новое фото
-        if photo and photo.filename:
-            os.makedirs("static/categories", exist_ok=True)
-            photo_bytes = await photo.read()
-
-            safe_name = safe_filename(photo.filename, default="category.jpg")
-            _, ext = os.path.splitext(safe_name)
-            ext = (ext or ".jpg").lower()
-            if ext not in (".jpg", ".jpeg", ".png", ".webp"):
-                ext = ".jpg"
-
-            photo_path = f"static/categories/cat_{cat_id}_{int(time.time())}_{uuid.uuid4().hex}{ext}"
-            with open(photo_path, "wb") as f:
-                f.write(photo_bytes)
-
-            # Удаляем старое
-            if old_photo_path and os.path.exists(old_photo_path):
-                try:
-                    os.remove(old_photo_path)
-                except:
-                    pass
-
-        # Удалить фото
-        elif delete_photo == "on" and old_photo_path:
-            if os.path.exists(old_photo_path):
-                try:
-                    os.remove(old_photo_path)
-                except:
-                    pass
-            photo_path = None
-
-        cur.execute("UPDATE categories SET name = ?, photo_path = ? WHERE id = ?", (clean_name, photo_path, cat_id))
-        conn.commit()
-        target = safe_return_to(return_to, "/dashboard")
-        target = set_qp(target, "msg", "Категория обновлена!")
-        return RedirectResponse(target, status_code=303)
     @app.get("/logout")
     async def logout():
         resp = RedirectResponse("/")
