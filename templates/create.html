@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Создать бота • BonusDostavkaBot</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png">
+  <script src="/static/theme.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
+<script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a class="brand" href="/">
+        <span class="brand-badge" aria-hidden="true"></span>
+        <span>BonusDostavkaBot</span>
+      </a>
+      <nav class="nav">
+        <button
+          type="button"
+          class="theme-toggle"
+          id="themeToggle"
+          aria-label="Переключить тему"
+          aria-pressed="false"
+        >
+          <span class="theme-ico" aria-hidden="true">☀️</span>
+          <span class="theme-txt">Светлая</span>
+        </button>
+        <a href="/dashboard">Кабинет</a>
+        <a href="/logout">Выйти</a>
+      </nav>
+    </div>
+
+    <div class="card padded" style="max-width:720px; margin: 0 auto;">
+      <h1 style="font-size:30px;">Создать бота</h1>
+      <p>Вставьте токен, который вы получили в <span class="kbd">@BotFather</span>.</p>
+
+      <form class="form" action="/create" method="post">
+        <div class="form-row">
+          <div class="label">Токен</div>
+          <input type="text" name="token" placeholder="123456:ABCdefGHIjklMNopQRstuVWxyz..." required>
+          <div class="helper">Совет: не делитесь токеном публично.</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-success" type="submit">Запустить бота</button>
+          <a class="btn btn-ghost" href="/dashboard">← В кабинет</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="footer">
+      <div class="small">© BonusDostavkaBot</div>
+      <div class="small"><a href="/">На главную</a></div>
+    </div>
+  </div>
+
+  <script src="/static/scroll_restore.js" defer></script>
+
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="/static/toast.js" defer></script>
+</body>
+</html>

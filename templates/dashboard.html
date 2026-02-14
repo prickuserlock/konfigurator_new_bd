@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Личный кабинет • BonusDostavka</title>
+    <link rel="icon" href="/static/favicon.png" type="image/png">
+    <script src="/static/theme.js"></script>
+    <link rel="stylesheet" href="/static/app.css">
+    <script>document.documentElement.classList.add('js');</script>
+<style>
+/* Dashboard uses a lot of inline light colors. This block maps them to theme variables. */
+.page-dashboard .btn,
+.page-dashboard button { border-radius: 12px; }
+
+.page-dashboard .btn {
+  display:inline-block;
+  padding:10px 18px;
+  font-weight:700;
+  text-decoration:none;
+}
+
+.page-dashboard .bot{
+  background: var(--card);
+  border:1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+  margin: 18px 0;
+}
+
+.page-dashboard hr{ border:none; height:1px; background: var(--border); margin: 22px 0; }
+.page-dashboard summary{ cursor:pointer; font-weight:800; font-size: 16px; }
+.page-dashboard details{ margin: 12px 0; }
+
+/* Inline backgrounds in legacy markup */
+.page-dashboard div[style*="background:#f8f9fa"],
+.page-dashboard details[style*="background:#f8f9fa"]{
+  background: var(--card2) !important;
+  border-color: var(--border) !important;
+}
+
+.page-dashboard div[style*="background:white"],
+.page-dashboard div[style*="background:#fff"]{
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+.page-dashboard div[style*="background:#f0f0f0"]{
+  background: var(--card2) !important;
+  color: var(--muted) !important;
+}
+
+/* Danger confirm block */
+.page-dashboard div[style*="background:#ffebee"]{
+  background: color-mix(in srgb, var(--danger) 18%, var(--card)) !important;
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border)) !important;
+}
+
+/* Inline text colors */
+.page-dashboard [style*="color:#222"],
+.page-dashboard [style*="color:#333"]{ color: var(--text) !important; }
+
+.page-dashboard [style*="color:#444"],
+.page-dashboard [style*="color:#555"],
+.page-dashboard [style*="color:#777"],
+.page-dashboard [style*="color:#999"],
+.page-dashboard [style*="color:#aaa"]{ color: var(--muted) !important; }
+
+/* Inputs */
+.page-dashboard input,
+.page-dashboard textarea,
+.page-dashboard select{
+  background: var(--input-bg);
+  color: var(--text);
+  border:1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+/* Legacy colored buttons */
+.page-dashboard .green-btn{ background: var(--success) !important; color:#fff !important; }
+.page-dashboard .red-btn{ background: var(--danger) !important; color:#fff !important; }
+.page-dashboard .orange-btn{ background: var(--warn) !important; color:#fff !important; }
+
+.page-dashboard a[style*="background:#007bff"],
+.page-dashboard button[style*="background:#007bff"]{ background: var(--primary) !important; color:#fff !important; }
+
+.page-dashboard button[style*="background:#6c757d"],
+.page-dashboard a[style*="background:#757575"]{
+  background: var(--btn-muted-bg) !important;
+  color: var(--text) !important;
+  border:1px solid var(--border) !important;
+}
+
+.page-dashboard button[style*="background:#dc3545"],
+.page-dashboard button[style*="background:#c82333"],
+.page-dashboard button[style*="background:#c62828"],
+.page-dashboard button[style*="background:#ef5350"]{ background: var(--danger) !important; color:#fff !important; }
+
+.page-dashboard button[style*="background:#28a745"]{ background: var(--success) !important; color:#fff !important; }
+
+/* Switch looks OK on dark too */
+.page-dashboard .slider{ background-color: color-mix(in srgb, var(--border) 60%, transparent); }
+.page-dashboard input:checked + .slider{ background-color: var(--success); }
+.page-dashboard .slider:before{ background-color: var(--card); }
+</style>
+</head>
+<body class="page-dashboard">
+<div class="container">
+  <div class="header">
+    <a class="brand" href="/">
+      <span class="brand-badge" aria-hidden="true"></span>
+      <span>BonusDostavkaBot</span>
+    </a>
+    <nav class="nav">
+      <button
+          type="button"
+          class="theme-toggle"
+          id="themeToggle"
+          aria-label="Переключить тему"
+          aria-pressed="false"
+        >
+          <span class="theme-ico" aria-hidden="true">☀️</span>
+          <span class="theme-txt">Светлая</span>
+        </button>
+      {% if not bots %}
+        <a href="/create">Создать бота</a>
+      {% endif %}
+      <a href="/logout">Выйти</a>
+    </nav>
+  </div>
+
+<h1>Привет, {{ user }}!</h1>
+
+{% if not bots %}
+  <a href="/create" class="btn btn-primary">Создать нового бота</a>
+{% endif %}
+
+<div style="clear:both;"></div>
+<br>
+
+<!-- Уведомления (toast + fallback без JS) -->
+{% if request.query_params.get('err') %}
+<div class="notice error flash-inline" style="margin:20px 0;">{{ request.query_params.get('err') }}</div>
+{% endif %}
+{% if request.query_params.get('msg') %}
+<div class="notice success flash-inline" style="margin:20px 0;">{{ request.query_params.get('msg') }}</div>
+{% endif %}
+
+<!-- Если ботов нет -->
+{% if not bots %}
+  <div style="text-align:center; margin:100px 0; padding:60px; background:white; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,0.1);">
+    <h2>У тебя пока нет ботов</h2>
+    <p style="font-size:18px; color:#555;">Создай своего первого бота и начни зарабатывать уже сегодня!</p>
+    <a href="/create" class="btn btn-primary" style="font-size:20px; padding:18px 50px; margin-top:20px; display:inline-block;">Создать бота</a>
+  </div>
+{% else %}
+
+  <!-- Цикл по всем ботам -->
+  {% for bot in bots %}
+    <div class="bot" id="bot-{{ bot[0] }}">
+      <h2>@{{ bot[1] }} <small style="color:#777;">(ID: {{ bot[0] }})</small></h2>
+      <a href="https://t.me/{{ bot[1] }}" target="_blank" class="tg-open-btn">Открыть бота в Telegram</a>
+
+      <!-- Меню (категории / подкатегории / товары) -->
+<hr>
+<h3>Меню</h3>
+
+{# Компактная строка товара (раскрывается) #}
+{% macro render_prod_row(prod, bot, cat, loop_ctx, subcat_id) %}
+  <details class="menu-prod" id="prod-{{ prod[0] }}" data-remember="1" data-key="bot{{ bot[0] }}-prod{{ prod[0] }}">
+    <summary class="menu-row menu-row--prod">
+      <span class="menu-row__left">
+        <span class="menu-chevron" aria-hidden="true"></span>
+        <span class="menu-title">{{ prod[3] }}</span>
+        <span class="menu-price">{{ prod[4] }} ₽</span>
+        {% if prod[7] != 1 %}
+          <span class="menu-tag menu-tag--off">скрыт</span>
+        {% endif %}
+      </span>
+
+      <span class="menu-row__right menu-actions" onclick="event.stopPropagation();">
+        <form action="/toggle_product" method="post" class="menu-inline">
+          <input type="hidden" name="prod_id" value="{{ prod[0] }}">
+          <input type="hidden" name="return_to" value="/dashboard#prod-{{ prod[0] }}">
+          <label class="switch switch-sm" title="В продаже">
+            <input type="checkbox" name="enabled" {% if prod[7] == 1 %}checked{% endif %} onchange="this.form.submit()">
+            <span class="slider round"></span>
+          </label>
+        </form>
+
+        <a class="btn-mini btn-mini--ghost" href="/edit_product/{{ prod[0] }}?return_to=/dashboard%23prod-{{ prod[0] }}">Редактировать</a>
+
+        {%- if not loop_ctx.first %}
+        <form action="/move_product" method="post" class="menu-inline">
+          <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+          <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+          <input type="hidden" name="subcat_id" value="{{ subcat_id or '' }}">
+          <input type="hidden" name="prod_id" value="{{ prod[0] }}">
+          <input type="hidden" name="return_to" value="/dashboard#prod-{{ prod[0] }}">
+          <input type="hidden" name="direction" value="up">
+          <button type="submit" class="btn-mini btn-mini--ghost btn-mini--icon" title="Вверх">▲</button>
+        </form>
+        {%- endif %}
+
+        {%- if not loop_ctx.last %}
+        <form action="/move_product" method="post" class="menu-inline">
+          <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+          <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+          <input type="hidden" name="subcat_id" value="{{ subcat_id or '' }}">
+          <input type="hidden" name="prod_id" value="{{ prod[0] }}">
+          <input type="hidden" name="return_to" value="/dashboard#prod-{{ prod[0] }}">
+          <input type="hidden" name="direction" value="down">
+          <button type="submit" class="btn-mini btn-mini--ghost btn-mini--icon" title="Вниз">▼</button>
+        </form>
+        {%- endif %}
+
+        <form action="/delete_product" method="post" class="menu-inline" onsubmit="return confirm('Удалить товар «{{ prod[3] }}»?');">
+          <input type="hidden" name="prod_id" value="{{ prod[0] }}">
+          <input type="hidden" name="return_to" value="/dashboard#prod-{{ prod[0] }}">
+          <button type="submit" class="btn-mini btn-mini--danger">Удалить</button>
+        </form>
+      </span>
+    </summary>
+
+    <div class="menu-prod__body">
+      <div class="menu-prod__media">
+        {% if prod[6] %}
+          <img src="/{{ prod[6] }}" class="menu-prod__img" alt="">
+        {% else %}
+          <div class="menu-prod__noimg">Нет фото</div>
+        {% endif %}
+      </div>
+      <div class="menu-prod__text">
+        <div class="menu-prod__desc">{{ prod[5] or "Без описания" }}</div>
+      </div>
+    </div>
+  </details>
+{% endmacro %}
+
+<div class="menu-tree" id="menu-{{ bot[0] }}">
+  {% set bot_id = bot[0] %}
+
+  {% set cats = categories.get(bot_id, []) %}
+  {% if cats|length > 0 %}
+
+    {% for cat in cats %}
+      <details class="menu-cat" id="cat-{{ cat[0] }}" {% if loop.first %}open{% endif %}>
+        <summary class="menu-row menu-row--cat">
+          <div class="menu-left">
+            {% if cat[3] %}
+              <img src="/{{ cat[3] }}" class="thumb thumb--cat" alt="">
+            {% endif %}
+            <div>
+              <div class="menu-title">
+                {{ cat[2] }}
+                {% if not cat[4] %}<span class="badge badge-off">скрыто</span>{% endif %}
+              </div>
+              <div class="menu-meta">Категория</div>
+            </div>
+          </div>
+
+          <div class="menu-actions">
+            <!-- Перемещение категории -->
+            {% if not loop.first %}
+            <form action="/move_category" method="post" style="display:inline; margin-right:6px;">
+              <input type="hidden" name="bot_id" value="{{ bot_id }}">
+              <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+              <input type="hidden" name="return_to" value="/dashboard#cat-{{ cat[0] }}">
+              <input type="hidden" name="direction" value="up">
+              <button type="submit" title="Вверх" class="btn btn-secondary btn-sm">▲</button>
+            </form>
+            {% endif %}
+
+            {% if not loop.last %}
+            <form action="/move_category" method="post" style="display:inline; margin-right:6px;">
+              <input type="hidden" name="bot_id" value="{{ bot_id }}">
+              <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+              <input type="hidden" name="return_to" value="/dashboard#cat-{{ cat[0] }}">
+              <input type="hidden" name="direction" value="down">
+              <button type="submit" title="Вниз" class="btn btn-secondary btn-sm">▼</button>
+            </form>
+            {% endif %}
+
+            <a href="/edit_category?bot_id={{ bot_id }}&cat_id={{ cat[0] }}&return_to=/dashboard#cat-{{ cat[0] }}" class="btn btn-secondary btn-sm">Ред.</a>
+
+            <form action="/toggle_category" method="post" style="display:inline;">
+              <input type="hidden" name="bot_id" value="{{ bot_id }}">
+              <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+              <input type="hidden" name="return_to" value="/dashboard#cat-{{ cat[0] }}">
+              <button type="submit" class="btn btn-sm {% if cat[4] %}btn-warning{% else %}btn-success{% endif %}">
+                {% if cat[4] %}Скрыть{% else %}Показать{% endif %}
+              </button>
+            </form>
+
+            <form action="/delete_category" method="post" style="display:inline;" onsubmit="return confirm('Удалить категорию?');">
+              <input type="hidden" name="bot_id" value="{{ bot_id }}">
+              <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+              <input type="hidden" name="return_to" value="/dashboard#bot-{{ bot_id }}">
+              <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+            </form>
+          </div>
+        </summary>
+
+        <div class="menu-body">
+          {% set roots = subcategories_root.get(cat[0], []) %}
+          {% set cat_prods = products_by_cat.get(cat[0], []) %}
+
+          {# Если в категории нет подкатегорий — показываем товары прямо в категории #}
+          {% if roots|length == 0 %}
+            <div class="menu-section" style="margin-bottom:12px;">
+              <div class="menu-section__title" style="font-weight:700; margin: 6px 0 10px;">Товары в категории</div>
+
+              {% if cat_prods|length > 0 %}
+                {% for prod in cat_prods %}
+                  {{ render_prod_row(prod, bot, cat, loop, None) }}
+                {% endfor %}
+              {% else %}
+                <div class="menu-empty">Товаров пока нет.</div>
+              {% endif %}
+
+              <details class="menu-add" style="margin-top:10px;">
+                <summary class="btn btn-success btn-sm">+ Добавить товар</summary>
+                <div class="menu-form">
+                  <form action="/add_product" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                    <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                    <input type="hidden" name="return_to" value="/dashboard#cat-{{ cat[0] }}">
+                    <input type="text" name="name" placeholder="Название товара" required>
+                    <input type="number" name="price" placeholder="Цена" required>
+                    <textarea name="description" placeholder="Описание"></textarea>
+                    <input type="file" name="photo" accept="image/*">
+                    <button type="submit" class="btn btn-success">Добавить</button>
+                  </form>
+                </div>
+              </details>
+            </div>
+          {% endif %}
+
+          {% if roots|length > 0 %}
+
+            {% for sub in roots %}
+              {% set children = subcategories_children.get(sub[0], []) %}
+              {% set has_children = (children|length > 0) %}
+
+              <details class="menu-subcat" id="subcat-{{ sub[0] }}">
+                <summary class="menu-row menu-row--subcat">
+                  <div class="menu-left">
+                    {% if sub[6] %}
+                      <img src="/{{ sub[6] }}" class="thumb thumb--subcat" alt="">
+                    {% endif %}
+                    <div>
+                      <div class="menu-title">
+                        {{ sub[3] }}
+                        {% if not sub[4] %}<span class="badge badge-off">скрыто</span>{% endif %}
+                        {% if has_children %}<span class="badge badge-info">вложенные: {{ children|length }}</span>{% endif %}
+                      </div>
+                      <div class="menu-meta">Подкатегория</div>
+                    </div>
+                  </div>
+
+                  <div class="menu-actions">
+                    {% if not loop.first %}
+                    <form action="/move_subcategory" method="post" style="display:inline; margin-right:6px;">
+                      <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                      <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                      <input type="hidden" name="subcat_id" value="{{ sub[0] }}">
+                      <input type="hidden" name="return_to" value="/dashboard#cat-{{ cat[0] }}">
+                      <input type="hidden" name="direction" value="up">
+                      <button type="submit" title="Вверх" class="btn btn-secondary btn-sm">▲</button>
+                    </form>
+                    {% endif %}
+
+                    {% if not loop.last %}
+                    <form action="/move_subcategory" method="post" style="display:inline; margin-right:6px;">
+                      <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                      <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                      <input type="hidden" name="subcat_id" value="{{ sub[0] }}">
+                      <input type="hidden" name="return_to" value="/dashboard#cat-{{ cat[0] }}">
+                      <input type="hidden" name="direction" value="down">
+                      <button type="submit" title="Вниз" class="btn btn-secondary btn-sm">▼</button>
+                    </form>
+                    {% endif %}
+
+                    <a href="/edit_subcategory?bot_id={{ bot_id }}&subcat_id={{ sub[0] }}&return_to=/dashboard#cat-{{ cat[0] }}" class="btn btn-secondary btn-sm">Ред.</a>
+
+                    <form action="/toggle_subcategory" method="post" style="display:inline;">
+                      <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                      <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                      <input type="hidden" name="subcat_id" value="{{ sub[0] }}">
+                      <input type="hidden" name="return_to" value="/dashboard#cat-{{ cat[0] }}">
+                      <button type="submit" class="btn btn-sm {% if sub[4] %}btn-warning{% else %}btn-success{% endif %}">
+                        {% if sub[4] %}Скрыть{% else %}Показать{% endif %}
+                      </button>
+                    </form>
+
+                    <form action="/delete_subcategory" method="post" style="display:inline;" onsubmit="return confirm('Удалить подкатегорию?');">
+                      <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                      <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                      <input type="hidden" name="subcat_id" value="{{ sub[0] }}">
+                      <input type="hidden" name="return_to" value="/dashboard#cat-{{ cat[0] }}">
+                      <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                    </form>
+                  </div>
+                </summary>
+
+                <div class="menu-body menu-body--inner">
+                  {% if has_children %}
+                    <!-- Вложенные подподкатегории -->
+                    {% for sub2 in children %}
+                      <details class="menu-subcat menu-subcat--nested" id="subcat-{{ sub2[0] }}">
+                        <summary class="menu-row menu-row--subcat">
+                          <div class="menu-left">
+                            {% if sub2[6] %}
+                              <img src="/{{ sub2[6] }}" class="thumb thumb--subcat" alt="">
+                            {% endif %}
+                            <div>
+                              <div class="menu-title">
+                                {{ sub2[3] }}
+                                {% if not sub2[4] %}<span class="badge badge-off">скрыто</span>{% endif %}
+                              </div>
+                              <div class="menu-meta">Подподкатегория</div>
+                            </div>
+                          </div>
+
+                          <div class="menu-actions">
+                            {% if not loop.first %}
+                            <form action="/move_subcategory" method="post" style="display:inline; margin-right:6px;">
+                              <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                              <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                              <input type="hidden" name="subcat_id" value="{{ sub2[0] }}">
+                              <input type="hidden" name="return_to" value="/dashboard#subcat-{{ sub[0] }}">
+                              <input type="hidden" name="direction" value="up">
+                              <button type="submit" title="Вверх" class="btn btn-secondary btn-sm">▲</button>
+                            </form>
+                            {% endif %}
+
+                            {% if not loop.last %}
+                            <form action="/move_subcategory" method="post" style="display:inline; margin-right:6px;">
+                              <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                              <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                              <input type="hidden" name="subcat_id" value="{{ sub2[0] }}">
+                              <input type="hidden" name="return_to" value="/dashboard#subcat-{{ sub[0] }}">
+                              <input type="hidden" name="direction" value="down">
+                              <button type="submit" title="Вниз" class="btn btn-secondary btn-sm">▼</button>
+                            </form>
+                            {% endif %}
+
+                            <a href="/edit_subcategory?bot_id={{ bot_id }}&subcat_id={{ sub2[0] }}&return_to=/dashboard#subcat-{{ sub[0] }}" class="btn btn-secondary btn-sm">Ред.</a>
+
+                            <form action="/toggle_subcategory" method="post" style="display:inline;">
+                              <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                              <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                              <input type="hidden" name="subcat_id" value="{{ sub2[0] }}">
+                              <input type="hidden" name="return_to" value="/dashboard#subcat-{{ sub[0] }}">
+                              <button type="submit" class="btn btn-sm {% if sub2[4] %}btn-warning{% else %}btn-success{% endif %}">
+                                {% if sub2[4] %}Скрыть{% else %}Показать{% endif %}
+                              </button>
+                            </form>
+
+                            <form action="/delete_subcategory" method="post" style="display:inline;" onsubmit="return confirm('Удалить подподкатегорию?');">
+                              <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                              <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                              <input type="hidden" name="subcat_id" value="{{ sub2[0] }}">
+                              <input type="hidden" name="return_to" value="/dashboard#subcat-{{ sub[0] }}">
+                              <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                            </form>
+                          </div>
+                        </summary>
+
+                        <div class="menu-body menu-body--inner">
+                          {% set prods = products_by_subcat.get(sub2[0], []) %}
+                          {% if prods|length > 0 %}
+                            {% for prod in prods %}
+                              {{ render_prod_row(prod, bot, cat, loop, sub2[0]) }}
+                            {% endfor %}
+                          {% else %}
+                            <div class="menu-empty">Товаров пока нет.</div>
+                          {% endif %}
+
+                          <details class="menu-add">
+                            <summary class="btn btn-success btn-sm">+ Добавить товар</summary>
+                            <div class="menu-form">
+                              <form action="/add_product" method="post" enctype="multipart/form-data">
+                                <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                                <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                                <input type="hidden" name="subcat_id" value="{{ sub2[0] }}">
+                                <input type="hidden" name="return_to" value="/dashboard#subcat-{{ sub2[0] }}">
+                                <input type="text" name="name" placeholder="Название товара" required>
+                                <input type="number" name="price" placeholder="Цена" required>
+                                <textarea name="description" placeholder="Описание"></textarea>
+                                <input type="file" name="photo" accept="image/*">
+                                <button type="submit" class="btn btn-success">Добавить</button>
+                              </form>
+                            </div>
+                          </details>
+                        </div>
+                      </details>
+                    {% endfor %}
+
+                    <details class="menu-add" style="margin-top:10px;">
+                      <summary class="btn btn-success btn-sm">+ Добавить подподкатегорию</summary>
+                      <div class="menu-form">
+                        <form action="/add_subcategory" method="post" enctype="multipart/form-data">
+                          <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                          <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                          <input type="hidden" name="parent_subcat_id" value="{{ sub[0] }}">
+                          <input type="hidden" name="return_to" value="/dashboard#subcat-{{ sub[0] }}">
+                          <input type="text" name="name" placeholder="Название подподкатегории" required>
+                        <input type="file" name="photo" accept="image/*">
+                          <button type="submit" class="btn btn-success">Добавить</button>
+                        </form>
+                      </div>
+                    </details>
+
+                  {% else %}
+                    {% set prods_leaf = products_by_subcat.get(sub[0], []) %}
+                    {% if prods_leaf|length > 0 %}
+                      {% for prod in prods_leaf %}
+                        {{ render_prod_row(prod, bot, cat, loop, sub[0]) }}
+                      {% endfor %}
+                    {% else %}
+                      <div class="menu-empty">Товаров пока нет.</div>
+                    {% endif %}
+
+                    <details class="menu-add" style="margin-top:10px;">
+                      <summary class="btn btn-success btn-sm">+ Добавить товар</summary>
+                      <div class="menu-form">
+                        <form action="/add_product" method="post" enctype="multipart/form-data">
+                          <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                          <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                          <input type="hidden" name="subcat_id" value="{{ sub[0] }}">
+                          <input type="hidden" name="return_to" value="/dashboard#subcat-{{ sub[0] }}">
+                          <input type="text" name="name" placeholder="Название товара" required>
+                          <input type="number" name="price" placeholder="Цена" required>
+                          <textarea name="description" placeholder="Описание"></textarea>
+                          <input type="file" name="photo" accept="image/*">
+                          <button type="submit" class="btn btn-success">Добавить</button>
+                        </form>
+                      </div>
+                    </details>
+
+                    <details class="menu-add" style="margin-top:10px;">
+                      <summary class="btn btn-success btn-sm">+ Добавить подподкатегорию</summary>
+                      <form action="/add_subcategory" method="post" class="form mini" style="margin-top:12px;" enctype="multipart/form-data">
+                        <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                        <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                        <input type="hidden" name="parent_subcat_id" value="{{ sub[0] }}">
+                        <input type="hidden" name="return_to" value="/dashboard#subcat-{{ sub[0] }}">
+                        <input type="text" name="name" placeholder="Название подподкатегории" required>
+                        <input type="file" name="photo" accept="image/*">
+                        <button class="btn btn-success btn-sm" type="submit">Добавить</button>
+                      </form>
+                    </details>
+                  {% endif %}
+                </div>
+              </details>
+
+            {% endfor %}
+
+          {% else %}
+            <div class="menu-empty">Подкатегорий пока нет.</div>
+          {% endif %}
+
+          <details class="menu-add" style="margin-top:12px;">
+            <summary class="btn btn-success btn-sm">+ Добавить подкатегорию</summary>
+            <div class="menu-form">
+              <form action="/add_subcategory" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="bot_id" value="{{ bot_id }}">
+                <input type="hidden" name="cat_id" value="{{ cat[0] }}">
+                <input type="hidden" name="return_to" value="/dashboard#cat-{{ cat[0] }}">
+                <input type="text" name="name" placeholder="Название подкатегории" required>
+                <input type="file" name="photo" accept="image/*">
+                <button type="submit" class="btn btn-success">Добавить</button>
+              </form>
+            </div>
+          </details>
+
+        </div>
+      </details>
+    {% endfor %}
+
+    <details class="menu-add" style="margin-top:14px;">
+      <summary class="btn btn-success">+ Добавить категорию</summary>
+      <div class="menu-form">
+        <form action="/add_category" method="post" enctype="multipart/form-data">
+          <input type="hidden" name="bot_id" value="{{ bot_id }}">
+          <input type="hidden" name="return_to" value="/dashboard#bot-{{ bot_id }}">
+          <input type="text" name="name" placeholder="Новая категория (например: Супы)" required>
+          <input type="file" name="photo" accept="image/*">
+          <button type="submit" class="btn btn-success">Добавить категорию</button>
+        </form>
+      </div>
+    </details>
+
+  {% else %}
+    <div class="menu-empty">Категорий пока нет.</div>
+    <form action="/add_category" method="post" class="menu-form" style="margin-top:12px;" enctype="multipart/form-data">
+      <input type="hidden" name="bot_id" value="{{ bot_id }}">
+      <input type="hidden" name="return_to" value="/dashboard#bot-{{ bot_id }}">
+      <input type="text" name="name" placeholder="Новая категория (например: Супы)" required>
+          <input type="file" name="photo" accept="image/*">
+      <button type="submit" class="btn btn-success">+ Добавить категорию</button>
+    </form>
+  {% endif %}
+</div>
+
+<div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h3 style="margin-top: 0; color: #333;">Способы получения заказа</h3>
+    
+    <form method="post" action="/toggle_order_type">
+        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+
+        <!-- В зале -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin: 15px 0;">
+            <label style="font-size: 16px; color: #444;">В зале</label>
+            <label class="switch">
+                <input type="checkbox" name="in_hall" {% if bot[4] == 1 %}checked{% endif %}>
+                <span class="slider round"></span>
+            </label>
+        </div>
+
+        <!-- Самовывоз -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin: 15px 0;">
+            <label style="font-size: 16px; color: #444;">Самовывоз</label>
+            <label class="switch">
+                <input type="checkbox" name="takeaway" {% if bot[5] == 1 %}checked{% endif %}>
+                <span class="slider round"></span>
+            </label>
+        </div>
+
+        <!-- Доставка курьером -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin: 15px 0;">
+            <label style="font-size: 16px; color: #444;">Доставка курьером</label>
+            <label class="switch">
+                <input type="checkbox" name="delivery" {% if bot[6] == 1 %}checked{% endif %}>
+                <span class="slider round"></span>
+            </label>
+        </div>
+
+        <button type="submit" style="margin-top: 20px; padding: 12px 30px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+            Сохранить настройки
+        </button>
+    </form>
+</div>
+
+<div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h3 style="margin-top: 0; color: #333;">Минимальная сумма заказа</h3>
+    <p style="color:#444;">Если поставить <b>0</b> — ограничения нет.</p>
+
+    <form action="/save_min_order" method="post">
+        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+
+        <label>Минимальная сумма заказа (₽):<br>
+            <input type="number" name="min_order_total" value="{{ bot[21] if bot[21] is not none else 0 }}" min="0" step="1" style="width:150px; padding:8px;">
+        </label><br><br>
+
+        <button type="submit" style="padding: 12px 30px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+            Сохранить минимальную сумму
+        </button>
+    </form>
+</div>
+
+<div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h3 style="margin-top: 0; color: #333;">Бонусная система</h3>
+    <p style="color:#444;">Настраивайте, как начисляются и тратятся бонусы.</p>
+   
+    <form action="/save_bonus_settings" method="post">
+        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+
+        <label>
+            <input type="checkbox" name="bonuses_enabled" {% if bot[13] == 1 %}checked{% endif %}>
+            Бонусная система включена
+        </label><br><br>
+
+        <label>Процент начисления бонусов от суммы заказа (%):<br>
+            <input type="number" name="bonus_percent" value="{{ bot[14] if bot[14] is not none else 10 }}" min="0" max="100" step="1" style="width:100px; padding:8px;">
+        </label><br><br>
+
+        <label>Максимальный процент оплаты бонусами (%):<br>
+            <input type="number" name="max_bonus_pay_percent" value="{{ bot[15] if bot[15] is not none else 30 }}" min="0" max="100" step="1" style="width:100px; padding:8px;">
+        </label><br><br>
+
+        <label>Минимальная сумма заказа для начисления бонусов (₽):<br>
+            <input type="number" name="min_order_for_bonus" value="{{ bot[16] if bot[16] is not none else 0 }}" min="0" step="1" style="width:150px; padding:8px;">
+        </label><br><br>
+
+        <label>Сгорание бонусов через N дней (0 = не сгорают):<br>
+            <input type="number" name="bonus_expire_days" value="{{ bot[17] if bot[17] is not none else 0 }}" min="0" step="1" style="width:100px; padding:8px;">
+        </label><br><br>
+
+        <label>Приветственный бонус для новых клиентов (бонусов):<br>
+            <input type="number" name="welcome_bonus" value="{{ bot[18] if bot[18] is not none else 0 }}" min="0" step="1" style="width:150px; padding:8px;">
+        </label><br><br>
+
+        <button type="submit" style="padding: 12px 30px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+            Сохранить настройки бонусов
+        </button>
+    </form>
+</div>
+
+
+
+<div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h3 style="margin-top: 0; color: #333;">Онлайн-оплата (ЮKassa)</h3>
+    <p style="color:#444;">
+        Подключите оплату через Telegram Payments. Нужен <b>provider token</b>, который выдаёт @BotFather после подключения ЮKassa.
+        Для тестов используйте <b>TEST</b> token.
+    </p>
+
+    <form action="/save_payment_settings" method="post">
+        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+
+        <label>
+            <input type="checkbox" name="payments_enabled" {% if bot[19] == 1 %}checked{% endif %}>
+            Включить онлайн-оплату
+        </label><br><br>
+
+        <label>Provider token (TEST/LIVE):<br>
+            <input type="password" name="payment_provider_token" value="{{ bot[20] if bot[20] is not none else '' }}"
+                   placeholder="123456789:TEST:xxxxxxxxxxxxxxxx" autocomplete="off"
+                   style="width:100%; max-width:520px; padding:10px; border-radius:8px; border:1px solid #ccc;">
+        </label>
+
+        <div style="margin-top:10px; color:#555; font-size:14px;">
+            Как получить: @BotFather → /mybots → ваш бот → <b>Payments</b> → <b>YooKassa</b> → Get provider token (TEST).
+        </div>
+
+        <button type="submit" style="margin-top: 14px; padding: 12px 30px; background: #0ea5e9; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+            Сохранить настройки оплаты
+        </button>
+    </form>
+</div>
+<div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h3 style="margin-top: 0; color: #333;">Кассиры (офлайн начисления)</h3>
+    <p style="color:#444;">Добавьте Telegram ID кассиров. Они смогут сканировать QR из «Виртуальная карта» и начислять бонусы офлайн.</p>
+
+    {% set bot_cashiers = cashiers.get(bot[0], []) %}
+    {% if bot_cashiers and bot_cashiers|length > 0 %}
+        <div style="margin-top: 10px;">
+            {% for cid in bot_cashiers %}
+                <div style="display:flex; align-items:center; gap:10px; margin:6px 0; flex-wrap:wrap;">
+                    <div style="font-family: monospace; padding: 6px 10px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        {{ cid }}
+                    </div>
+                    <form action="/delete_cashier" method="post" style="margin:0;">
+                        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+                        <input type="hidden" name="cashier_id" value="{{ cid }}">
+                        <button type="submit" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius: 8px; cursor:pointer;">
+                            Удалить
+                        </button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="color:#666;">Кассиры не добавлены.</p>
+    {% endif %}
+
+    <form action="/add_cashier" method="post" style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+        <input type="text" name="cashier_id" placeholder="Telegram ID кассира (число)" required
+               style="padding: 10px; border-radius: 8px; border: 1px solid #ccc; min-width: 260px;">
+        <button type="submit" style="padding: 10px 14px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer;">
+            Добавить кассира
+        </button>
+    </form>
+
+    <div style="margin-top:10px; color:#555; font-size:14px;">
+        Как узнать Telegram ID:  →  используйте @id_bot.
+    </div>
+</div>
+
+
+<div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h3 style="margin-top: 0; color: #333;">Время работы кафе</h3>
+   
+    <form method="post" action="/save_work_time">
+        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+        
+        <div style="margin: 15px 0;">
+            <label style="font-size: 16px; color: #444;">Ограничивать заказы по времени</label>
+            <label class="switch" style="float:right;">
+                <input type="checkbox" name="restrict_orders" {% if bot[10] == 1 %}checked{% endif %}>
+                <span class="slider round"></span>
+            </label>
+            <div style="clear:both;"></div>
+        </div>
+        
+        <div style="margin: 15px 0;">
+            <label>Часовой пояс:</label>
+            <select name="timezone" style="padding:8px; border-radius:8px; border:1px solid #ccc; width:200px;">
+                <option value="Europe/Moscow" {% if bot[7] == "Europe/Moscow" %}selected{% endif %}>Москва (UTC+3)</option>
+                <option value="Europe/Kaliningrad" {% if bot[7] == "Europe/Kaliningrad" %}selected{% endif %}>Калининград (UTC+2)</option>
+                <option value="Europe/Samara" {% if bot[7] == "Europe/Samara" %}selected{% endif %}>Самара (UTC+4)</option>
+                <option value="Asia/Yekaterinburg" {% if bot[7] == "Asia/Yekaterinburg" %}selected{% endif %}>Екатеринбург (UTC+5)</option>
+                <option value="Asia/Novosibirsk" {% if bot[7] == "Asia/Novosibirsk" %}selected{% endif %}>Новосибирск (UTC+7)</option>
+                <option value="Asia/Vladivostok" {% if bot[7] == "Asia/Vladivostok" %}selected{% endif %}>Владивосток (UTC+10)</option>
+                <option value="Asia/Kamchatka" {% if bot[7] == "Asia/Kamchatka" %}selected{% endif %}>Камчатка (UTC+12)</option>
+            </select>
+        </div>
+        
+        <div style="margin: 15px 0;">
+            <label>Работаем с:</label>
+            <input type="time" name="work_start" value="{{ bot[8] or '' }}" style="padding:8px; border-radius:8px;">
+            <label style="margin-left:20px;">по:</label>
+            <input type="time" name="work_end" value="{{ bot[9] or '' }}" style="padding:8px; border-radius:8px;">
+        </div>
+        
+        <button type="submit" style="margin-top: 20px; padding: 12px 30px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+            Сохранить время работы
+        </button>
+    </form>
+</div>
+
+<div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h3 style="margin-top: 0; color: #333;">Автоотмена заказа</h3>
+    <p style="color:#555;">Если сотрудник не принял и не отменил заказ — он автоматически отменится через указанное время.</p>
+   
+    <form method="post" action="/save_auto_cancel">
+        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+        
+        <!-- ПЕРЕКЛЮЧАТЕЛЬ ВКЛ/ВЫКЛ -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin: 15px 0;">
+            <label style="font-size: 16px; color: #444;">Автоотмена заказов</label>
+            <label class="switch">
+                <input type="checkbox" name="auto_cancel_enabled" {% if bot[12] == 1 %}checked{% endif %}>
+                <span class="slider round"></span>
+            </label>
+        </div>
+        
+        <div style="margin: 15px 0;">
+            <label>Автоотмена через:</label>
+            <input type="number" name="minutes" value="{{ bot[11] or 60 }}" min="10" max="120" style="padding:8px; width:80px; border-radius:8px; border:1px solid #ccc;">
+            <span style="margin-left:10px; color:#555;">минут (10-120)</span>
+        </div>
+        
+        <button type="submit" style="padding: 12px 30px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+            Сохранить автоотмену
+        </button>
+    </form>
+</div>
+<!-- СТИЛИ ДЛЯ КРАСИВЫХ ПЕРЕКЛЮЧАТЕЛЕЙ -->
+<style>
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #28a745;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+</style>
+
+      <hr>
+      <p><b>Текст кнопки «О нас»:</b></p>
+      <form action="/update_about" method="post">
+        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+        <textarea name="about" style="width:100%; padding:12px; border-radius:12px;" rows="4">{{ bot[2] }}</textarea><br><br>
+        <button type="submit" class="green-btn">Сохранить</button>
+      </form>
+<div style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h3 style="margin-top: 0; color: #333;">Фото меню (несколько страниц)</h3>
+    <p style="color:#555;">Загрузите страницы меню. Они будут показываться по порядку при нажатии кнопки "Меню" в боте.</p>
+    
+    <form method="post" action="/upload_menu_photos" enctype="multipart/form-data">
+        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+        
+        <label style="display:block; margin-bottom:8px;">Загрузите несколько фото (можно зажать Ctrl/Cmd):</label>
+        <input type="file" name="photos" accept="image/*" multiple style="margin-bottom:15px;">
+        
+        <button type="submit" style="padding:10px 20px; background:#007bff; color:white; border:none; border-radius:8px;">Загрузить фото</button>
+    </form>
+    
+    <!-- Показ существующих фото -->
+    {% set menu_photos = get_menu_photos(bot[0]) %}
+    {% if menu_photos %}
+        <h4 style="margin-top:20px;">Загруженные страницы меню:</h4>
+        {% for photo in menu_photos %}
+            <div style="display:inline-block; margin:10px; text-align:center;">
+                <img src="/{{ photo.photo_path }}" style="max-width:200px; border-radius:8px;">
+                <br>
+                <form method="post" action="/delete_menu_photo" style="display:inline;">
+                    <input type="hidden" name="photo_id" value="{{ photo.id }}">
+                    <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+                    <button type="submit" style="margin-top:5px; padding:5px 10px; background:#dc3545; color:white; border:none; border-radius:4px; font-size:12px;">Удалить</button>
+                </form>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+<form method="post" action="/save_notify_chat">
+    <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+    <p>
+        <strong>ID чата для уведомлений о заказах:</strong><br>
+        <input type="text" name="notify_chat_id" value="{{ bot[3] or '' }}"
+               placeholder="1001234567890" style="width: 300px; padding: 8px;">
+        <br><small>Добавьте бота в чат кафе → перешлите id чата сюда</small>
+    </p>
+    <button type="submit">Сохранить чат уведомлений</button>
+</form>
+<br>
+      <hr>
+      <p><b>Рассылка всем клиентам:</b></p>
+      <form action="/send_broadcast" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+        <textarea name="message" placeholder="Текст сообщения всем клиентам..." rows="4" style="width:100%; padding:12px; border-radius:12px;"></textarea><br>
+        <input type="file" name="photo" accept="image/*"><br><br>
+        <button type="submit" class="red-btn">Отправить всем</button>
+      </form>
+
+      <hr>
+      <div style="text-align:center; padding:20px; background:#ffebee; border-radius:16px; border:2px solid #ffcdd2;">
+        {% if request.query_params.confirm_delete and request.query_params.bot == bot[0]|string %}
+          <p style="color:#c62828; font-weight:bold; font-size:18px;">
+            Удалить бота @{{ bot[1] }} навсегда?
+          </p>
+          <form action="/confirm_delete_bot" method="post" style="display:inline; margin:0 10px;">
+            <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+            <button type="submit" style="background:#c62828; padding:12px 32px;">Да, удалить навсегда</button>
+          </form>
+          <a href="/dashboard" style="background:#757575; color:white; padding:12px 32px; border-radius:50px; text-decoration:none;">Отмена</a>
+        {% else %}
+          <form action="/delete_bot" method="post" style="display:inline;">
+            <input type="hidden" name="bot_id" value="{{ bot[0] }}">
+            <button type="submit" style="background:#ef5350; color:white; padding:12px 32px; font-weight:bold;">
+              Удалить этого бота
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+</div>
+
+<script>
+  // Кнопки "Товары" не должны сворачивать summary — открываем нужный <details> вручную
+  document.addEventListener('click', function(ev){
+    const btn = ev.target.closest('.js-open-details');
+    if(!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const id = btn.getAttribute('data-target');
+    if(!id) return;
+    const el = document.getElementById(id);
+    if(el){
+      el.open = true;
+      el.scrollIntoView({block:'nearest', behavior:'smooth'});
+    }
+  }, true);
+</script>
+
+<script src="/static/scroll_restore.js" defer></script>
+
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="/static/toast.js" defer></script>
+</body>
+</html>

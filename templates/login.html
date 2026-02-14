@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход • BonusDostavkaBot</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png">
+  <script src="/static/theme.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
+<script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a class="brand" href="/">
+        <span class="brand-badge" aria-hidden="true"></span>
+        <span>BonusDostavkaBot</span>
+      </a>
+      <nav class="nav">
+        <button
+          type="button"
+          class="theme-toggle"
+          id="themeToggle"
+          aria-label="Переключить тему"
+          aria-pressed="false"
+        >
+          <span class="theme-ico" aria-hidden="true">☀️</span>
+          <span class="theme-txt">Светлая</span>
+        </button>
+        <a href="/register">Регистрация</a>
+        <a href="/dashboard">Кабинет</a>
+      </nav>
+    </div>
+
+    <div class="card padded" style="max-width:520px; margin: 0 auto;">
+      <h1 style="font-size:30px;">Вход</h1>
+      <p>Введите email и пароль, чтобы открыть личный кабинет.</p>
+
+      {% if request.query_params.get('msg') %}
+        <div class="notice success flash-inline" style="margin-bottom:12px;">{{ request.query_params.get('msg') }}</div>
+      {% endif %}
+      {% if request.query_params.get('err') %}
+        <div class="notice error flash-inline" style="margin-bottom:12px;">{{ request.query_params.get('err') }}</div>
+      {% endif %}
+
+      <form class="form" action="/login" method="post">
+        <div class="form-row">
+          <div class="label">Email</div>
+          <input type="text" name="email" placeholder="you@example.com" required value="{{ request.query_params.get('email','') }}">
+        </div>
+
+        <div class="form-row">
+          <div class="label">Пароль</div>
+          <input type="password" name="password" placeholder="••••••••" required>
+        </div>
+
+        <button class="btn btn-primary" type="submit" style="width:100%;">Войти</button>
+
+        <div class="small" style="margin-top:10px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <span>Нет аккаунта? <a href="/register">Регистрация</a></span>
+          <span><a href="/forgot">Забыли пароль?</a></span>
+        </div>
+
+        {% if request.query_params.get('email') %}
+          <div class="small" style="margin-top:10px;">
+            Не пришло письмо подтверждения? <a href="/resend_verification?email={{ request.query_params.get('email') }}">Отправить ещё раз</a>
+          </div>
+        {% endif %}
+      </form>
+    </div>
+
+    <div class="footer">
+      <div class="small">© BonusDostavkaBot</div>
+      <div class="small"><a href="/">На главную</a></div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="/static/toast.js" defer></script>
+</body>
+</html>
